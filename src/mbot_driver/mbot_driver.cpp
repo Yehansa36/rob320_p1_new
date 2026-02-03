@@ -31,8 +31,6 @@ void MBotDriver::spin(std::unique_ptr<interfaces::Notification> notif) {
            break;
        }
   
-
-
    //read next 4 bytes
    size_t offset = 0;
    uint8_t size_buf[sizeof(uint32_t)];
@@ -71,14 +69,18 @@ void MBotDriver::spin(std::unique_ptr<interfaces::Notification> notif) {
    geometry::Twist2DStamped twist_msg;
    offset = 0;
 
-
    if (!twist_msg.deserialize(msg_buf.data(), msg_buf.size(), offset)) {
        continue;
    }
    //send drive command to mbot
    mbot->drive(twist_msg);
-
-
    }
-   mbot->drive(geometry::Twist2DStamped());
+
+   geometry::Twist2DStamped stop_msg;
+
+   stop_msg.twist.vx = 0.0;
+   stop_msg.twist.vy = 0.0;
+   stop_msg.twist.wz = 0.0;
+
+   mbot->drive(stop_msg);
 }
