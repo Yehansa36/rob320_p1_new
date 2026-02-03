@@ -9,75 +9,73 @@ void TeleopKeyboard::spin(std::unique_ptr<rix::ipc::interfaces::Notification> no
     
     /* TODO */
 
-    uint32_t seq = 0;
+    uint32_t seq = 0; //sequence number for msgs, increments with each new message
 
+    //infinite loop - runs until notification signals SIGINT or EOF
     while (true) {
         if (notif && notif->is_ready()) {
-            break;
+            break; //exit clean without sending anything else
         }
 
-        //read one charactor from input
+        //read one charactor from input stream
         uint8_t key;
-        ssize_t n = input->read(&key, 1);
+        ssize_t n = input->read(&key, 1); //n = number of bytes read
 
-        //EOF so exit
+        //if EOF or errors, exit function
         if (n <= 0) {
             return;
         }
 
+        //create new twist2dstamped msg to store the command
         geometry::Twist2DStamped msg;
+        //flag to rack if the key pressed maps to a valid command
         bool valid = true;
 
-        //mpa key to twist
+        //map the key to corresponding twist command
         switch (key) {
+            case 'w': //forward
+            msg.twist.vx = +linear_speed; //move forward in x
+            break;
+
+            case 'a': //left
+            msg.twist.vy = +linear_speed; //move left in y
+            break;
+
+            case 's': //backward
+            msg.twist.vx = -linear_speed; //move back in x
+            break;
+         
+            case 'd': //right
+            msg.twist.vy = -linear_speed; //move right in y
+            break;
             
-            case 'w':
-            msg.twist.vx = +linear_speed;
+            case 'q': //rotate counterclockwise
+            msg.twist.wz = +angular_speed; //positive angular velocity
             break;
 
-            
-            case 'a':
-            msg.twist.vy = +linear_speed;
+            case 'e': //rotate clockwise
+            msg.twist.wz = -angular_speed; //neg angular velocity
             break;
 
-            
-            case 's':
-            msg.twist.vx = -linear_speed;
+            case ' ': //space = stop
             break;
 
-            
-            case 'd':
-            msg.twist.vy = -linear_speed;
-            break;
-
-            
-            case 'q':
-            msg.twist.wz = +angular_speed;
-            break;
-
-            
-            case 'e':
-            msg.twist.wz = -angular_speed;
-            break;
-
-            case ' ':
-            break;
-
-            default:
+            default: //ignore any other key
             valid = false;
         }
 
-        if (!valid) {
+        if (!valid) { //skip iteration if key is invalid
             continue;
         }
+        //msg header
+        msg.header.seq = seq++; //incrementing sequence number
+        msg.header.frame_id = "mbot"; //frame name for robot
 
-        msg.header.seq = seq++;
-        msg.header.frame_id = "mbot";
-
+        //set timestamp in msec using current line
         auto now = Time::now();
         msg.header.stamp.sec = now.to_milliseconds();
 
-        //serelize msg
+        //serelize msg to byte array
         size_t msg_size = msg.size();
 
         standard::UInt32 size_msg;
